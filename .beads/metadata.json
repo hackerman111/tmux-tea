@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "tmux_tea",
+  "project_id": "837ab077-c755-4f89-8fa8-d58cb6dc1298"
+}
