@@ -51,7 +51,7 @@ func TestNotifyModelViewShowsActivePour(t *testing.T) {
 	for _, want := range []string{
 		"Шен Пуэр",
 		"пролив 2/5",
-		"Нажмите Enter",
+		"Enter закрыть, затем Prefix+T",
 		"████████╗",
 	} {
 		if !strings.Contains(view, want) {

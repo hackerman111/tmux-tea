@@ -1,6 +1,8 @@
 package timer
 
 import (
+	"context"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -58,16 +60,13 @@ func TestSession_RunCurrentPourWritesReadyStateAndCallsOnReady(t *testing.T) {
 	dir := t.TempDir()
 	statePath := filepath.Join(dir, "state.json")
 
-	oldSleep := sleep
-	sleep = func(time.Duration) {}
-	defer func() {
-		sleep = oldSleep
-	}()
+	restore := stubWaitForDuration(t, func(context.Context, time.Duration) error { return nil })
+	defer restore()
 
 	s := NewSession("Шен Пуэр", []int{1}, statePath)
 	readyCalls := 0
 
-	if err := s.RunCurrentPour(func() error {
+	if err := s.RunCurrentPour(context.Background(), func() error {
 		readyCalls++
 		return nil
 	}); err != nil {
@@ -104,10 +103,93 @@ func TestSession_RunCurrentPourRejectsInvalidDuration(t *testing.T) {
 	statePath := filepath.Join(dir, "state.json")
 
 	s := NewSession("test", []int{0}, statePath)
-	if err := s.RunCurrentPour(func() error {
+	if err := s.RunCurrentPour(context.Background(), func() error {
 		t.Fatal("onReady should not be called")
 		return nil
 	}); err == nil {
 		t.Fatal("RunCurrentPour should fail for invalid duration")
+	}
+}
+
+func TestSession_WaitForConfirmationReturnsWhenConfirmed(t *testing.T) {
+	dir := t.TempDir()
+	statePath := filepath.Join(dir, "state.json")
+
+	if err := WriteState(&State{
+		PID:          os.Getpid(),
+		TeaName:      "Шен Пуэр",
+		PourIndex:    0,
+		TotalPours:   1,
+		RemainingSec: 0,
+		Status:       StatusReady,
+	}, statePath); err != nil {
+		t.Fatalf("WriteState: %v", err)
+	}
+
+	calls := 0
+	restore := stubWaitForDuration(t, func(context.Context, time.Duration) error {
+		calls++
+		if calls == 1 {
+			return WriteState(&State{
+				PID:          os.Getpid(),
+				TeaName:      "Шен Пуэр",
+				PourIndex:    0,
+				TotalPours:   1,
+				RemainingSec: 0,
+				Status:       StatusConfirmed,
+			}, statePath)
+		}
+		return nil
+	})
+	defer restore()
+
+	s := NewSession("Шен Пуэр", []int{1}, statePath)
+	confirmed, err := s.WaitForConfirmation(context.Background())
+	if err != nil {
+		t.Fatalf("WaitForConfirmation: %v", err)
+	}
+	if !confirmed {
+		t.Fatal("WaitForConfirmation should return true after confirmation")
+	}
+}
+
+func TestSession_WaitForConfirmationReturnsFalseWhenStopped(t *testing.T) {
+	dir := t.TempDir()
+	statePath := filepath.Join(dir, "state.json")
+
+	if err := WriteState(&State{
+		PID:          os.Getpid(),
+		TeaName:      "Шен Пуэр",
+		PourIndex:    0,
+		TotalPours:   1,
+		RemainingSec: 0,
+		Status:       StatusReady,
+	}, statePath); err != nil {
+		t.Fatalf("WriteState: %v", err)
+	}
+
+	restore := stubWaitForDuration(t, func(context.Context, time.Duration) error {
+		ClearState(statePath)
+		return nil
+	})
+	defer restore()
+
+	s := NewSession("Шен Пуэр", []int{1}, statePath)
+	confirmed, err := s.WaitForConfirmation(context.Background())
+	if err != nil {
+		t.Fatalf("WaitForConfirmation: %v", err)
+	}
+	if confirmed {
+		t.Fatal("WaitForConfirmation should return false after stop")
+	}
+}
+
+func stubWaitForDuration(t *testing.T, fn func(context.Context, time.Duration) error) func() {
+	t.Helper()
+
+	original := waitForDuration
+	waitForDuration = fn
+	return func() {
+		waitForDuration = original
 	}
 }

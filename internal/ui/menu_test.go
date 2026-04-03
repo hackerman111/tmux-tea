@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/papayka/tmux-tea/internal/config"
 )
 
@@ -122,6 +123,24 @@ func TestMenuModelViewContainsTeaNamesAndHelp(t *testing.T) {
 	} {
 		if !strings.Contains(view, want) {
 			t.Fatalf("view should contain %q, got %q", want, view)
+		}
+	}
+}
+
+func TestMenuModelViewTruncatesLongTeaNames(t *testing.T) {
+	longName := "Очень длинное название чая для узкого tmux popup окна"
+	view := NewMenuModel([]config.Tea{{ID: "long", Name: longName}}).View()
+
+	if strings.Contains(view, longName) {
+		t.Fatalf("view should truncate long tea names, got %q", view)
+	}
+	if !strings.Contains(view, "...") {
+		t.Fatalf("view should contain truncation marker, got %q", view)
+	}
+
+	for _, line := range strings.Split(strings.TrimRight(view, "\n"), "\n") {
+		if width := lipgloss.Width(line); width > 56 {
+			t.Fatalf("line width = %d, want <= 56: %q", width, line)
 		}
 	}
 }

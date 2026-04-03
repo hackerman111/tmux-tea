@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/papayka/tmux-tea/internal/config"
 )
 
@@ -137,6 +138,33 @@ func TestScheduleModelViewContainsTeaNamePreviewAndHelp(t *testing.T) {
 	} {
 		if !strings.Contains(view, want) {
 			t.Fatalf("view should contain %q, got %q", want, view)
+		}
+	}
+}
+
+func TestScheduleModelViewTruncatesLongLabels(t *testing.T) {
+	longTeaName := "Очень длинное название шен пуэра для узкого popup окна"
+	longSchedule := config.Schedule{
+		ID:    "long",
+		Name:  "Экспериментальное расписание для очень длинного меню",
+		Pours: []int{5, 10, 15, 20, 25, 30, 35, 40, 45},
+	}
+
+	view := NewScheduleModel(longTeaName, []config.Schedule{longSchedule}).View()
+
+	if strings.Contains(view, longTeaName+" — расписание:") {
+		t.Fatalf("view should truncate long schedule title, got %q", view)
+	}
+	if strings.Contains(view, longSchedule.Name) {
+		t.Fatalf("view should truncate long schedule label, got %q", view)
+	}
+	if !strings.Contains(view, "...") {
+		t.Fatalf("view should contain truncation marker, got %q", view)
+	}
+
+	for _, line := range strings.Split(strings.TrimRight(view, "\n"), "\n") {
+		if width := lipgloss.Width(line); width > 56 {
+			t.Fatalf("line width = %d, want <= 56: %q", width, line)
 		}
 	}
 }

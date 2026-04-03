@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"fmt"
-
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/papayka/tmux-tea/internal/config"
@@ -92,20 +90,26 @@ func (m MenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m MenuModel) View() string {
-	s := TitleStyle.Render("Выберите чай:") + "\n\n"
+	lines := []string{
+		renderTitle("Выберите чай:"),
+		"",
+	}
 
 	for i, currentTea := range m.teas {
 		if i == m.cursor {
-			s += SelectedStyle.Render(fmt.Sprintf("> %s", currentTea.Name)) + "\n"
+			lines = append(lines, renderSelectedLine(currentTea.Name))
 		} else {
-			s += NormalStyle.Render(currentTea.Name) + "\n"
+			lines = append(lines, renderNormalLine(currentTea.Name))
 		}
 	}
 
-	s += "\n"
-	s += MutedStyle.Render("─────────────") + "\n"
-	s += MutedStyle.Render("a добавить  e редакт.  d удалить") + "\n"
-	s += HelpStyle.Render("  j/k выбор  enter старт  esc выход")
+	lines = append(lines,
+		"",
+		renderMutedLine("─────────────"),
+		renderMutedLine("a добавить  e редакт.  d удалить"),
+		"",
+		renderHelpLine("j/k выбор  enter старт  esc выход"),
+	)
 
-	return BorderStyle.Render(s)
+	return renderPanel(lines...)
 }

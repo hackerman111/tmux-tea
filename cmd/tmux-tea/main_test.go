@@ -117,8 +117,39 @@ func TestConfirmCmdMarksReadyStateConfirmed(t *testing.T) {
 	if updated == nil {
 		t.Fatal("state should still exist")
 	}
-	if updated.Status != statusConfirmed {
-		t.Fatalf("status = %q, want %q", updated.Status, statusConfirmed)
+	if updated.Status != timer.StatusConfirmed {
+		t.Fatalf("status = %q, want %q", updated.Status, timer.StatusConfirmed)
+	}
+}
+
+func TestConfirmCmdStopsActiveCountingSession(t *testing.T) {
+	statePath := filepath.Join(t.TempDir(), "state.json")
+	restore := stubStatePath(t, statePath)
+	defer restore()
+
+	state := &timer.State{
+		PID:          0,
+		TeaName:      "Шен Пуэр",
+		PourIndex:    0,
+		TotalPours:   5,
+		RemainingSec: 12,
+		Status:       timer.StatusCounting,
+	}
+	if err := timer.WriteState(state, statePath); err != nil {
+		t.Fatalf("WriteState failed: %v", err)
+	}
+
+	cmd := confirmCmd()
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("confirm command returned error: %v", err)
+	}
+
+	updated, err := timer.ReadState(statePath)
+	if err != nil {
+		t.Fatalf("ReadState failed: %v", err)
+	}
+	if updated != nil {
+		t.Fatalf("state = %#v, want nil after stop", updated)
 	}
 }
 

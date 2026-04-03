@@ -74,6 +74,10 @@ func (m NotifyModel) View() string {
 	}
 
 	s += "\n"
-	s += HelpStyle.Render("  Нажмите Enter")
+	if m.finished {
+		s += HelpStyle.Render("  Нажмите Enter")
+	} else {
+		s += HelpStyle.Render("  Enter закрыть, затем Prefix+T")
+	}
 	return BorderStyle.Render(s)
 }

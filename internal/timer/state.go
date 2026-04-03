@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	StatusCounting = "counting"
-	StatusReady    = "ready"
+	StatusCounting  = "counting"
+	StatusReady     = "ready"
+	StatusConfirmed = "confirmed"
 )
 
 type State struct {
@@ -54,6 +55,17 @@ func WriteState(state *State, path string) error {
 
 func ClearState(path string) {
 	_ = os.Remove(path)
+}
+
+func ClearStateIfOwned(path string, pid int) {
+	state, err := ReadState(path)
+	if err != nil || state == nil {
+		return
+	}
+	if state.PID != pid {
+		return
+	}
+	ClearState(path)
 }
 
 func IsProcessAlive(pid int) bool {

@@ -110,21 +110,27 @@ func formatPours(pours []int) string {
 }
 
 func (m ScheduleModel) View() string {
-	s := TitleStyle.Render(fmt.Sprintf("%s — расписание:", m.teaName)) + "\n\n"
+	lines := []string{
+		renderTitle(fmt.Sprintf("%s — расписание:", m.teaName)),
+		"",
+	}
 
 	for i, schedule := range m.schedules {
 		label := fmt.Sprintf("%s %s", schedule.Name, formatPours(schedule.Pours))
 		if i == m.cursor {
-			s += SelectedStyle.Render("> "+label) + "\n"
+			lines = append(lines, renderSelectedLine(label))
 		} else {
-			s += NormalStyle.Render(label) + "\n"
+			lines = append(lines, renderNormalLine(label))
 		}
 	}
 
-	s += "\n"
-	s += MutedStyle.Render("─────────────") + "\n"
-	s += MutedStyle.Render("a добавить  e редакт.  d удалить") + "\n"
-	s += HelpStyle.Render("  esc назад  enter старт")
+	lines = append(lines,
+		"",
+		renderMutedLine("─────────────"),
+		renderMutedLine("a добавить  e редакт.  d удалить"),
+		"",
+		renderHelpLine("esc назад  enter старт"),
+	)
 
-	return BorderStyle.Render(s)
+	return renderPanel(lines...)
 }

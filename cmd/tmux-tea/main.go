@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
@@ -12,8 +16,6 @@ import (
 	"github.com/papayka/tmux-tea/internal/tmux"
 	"github.com/papayka/tmux-tea/internal/ui"
 )
-
-const statusConfirmed = "confirmed"
 
 var (
 	configPathFunc = config.DefaultPath
@@ -227,8 +229,18 @@ func startCmd() *cobra.Command {
 
 			originalInterval, _ := tmux.GetOption("status-interval")
 			_ = tmux.SetOption("status-interval", "1")
+			defer func() {
+				timer.ClearStateIfOwned(statePathFunc(), os.Getpid())
+				if originalInterval != "" {
+					_ = tmux.SetOption("status-interval", originalInterval)
+				}
+			}()
 
 			session := timer.NewSession(selectedTea.Name, selectedSchedule.Pours, statePathFunc())
+			ctx, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+			defer stopSignals()
+
+			stopped := false
 
 			for !session.IsFinished() {
 				binPath, err := os.Executable()
@@ -236,7 +248,7 @@ func startCmd() *cobra.Command {
 					return err
 				}
 
-				err = session.RunCurrentPour(func() error {
+				err = session.RunCurrentPour(ctx, func() error {
 					_ = tmux.SendBell()
 					popupCmd := fmt.Sprintf(
 						"%q notify --tea-name %q --pour %d --total %d",
@@ -245,26 +257,38 @@ func startCmd() *cobra.Command {
 						session.CurrentPour,
 						session.TotalPours,
 					)
-					return tmux.DisplayPopup(50, 15, popupCmd)
+					return tmux.DisplayPopup(58, 15, popupCmd)
 				})
 				if err != nil {
+					if errors.Is(err, context.Canceled) {
+						stopped = true
+						break
+					}
+					return err
+				}
+
+				confirmed, err := session.WaitForConfirmation(ctx)
+				if err != nil {
+					if errors.Is(err, context.Canceled) {
+						stopped = true
+						break
+					}
+					return err
+				}
+				if !confirmed {
+					stopped = true
 					break
 				}
 
 				session.AdvancePour()
 			}
 
-			if session.IsFinished() {
+			if !stopped && session.IsFinished() {
 				binPath, err := os.Executable()
 				if err == nil {
 					popupCmd := fmt.Sprintf("%q notify --tea-name %q --finished", binPath, session.TeaName)
-					_ = tmux.DisplayPopup(50, 15, popupCmd)
+					_ = tmux.DisplayPopup(58, 15, popupCmd)
 				}
-			}
-
-			timer.ClearState(statePathFunc())
-			if originalInterval != "" {
-				_ = tmux.SetOption("status-interval", originalInterval)
 			}
 
 			return nil
@@ -317,10 +341,12 @@ func confirmCmd() *cobra.Command {
 			}
 
 			if state.Status == timer.StatusReady {
-				state.Status = statusConfirmed
+				state.Status = timer.StatusConfirmed
 				return timer.WriteState(state, statePathFunc())
 			}
 
+			timer.ClearState(statePathFunc())
+			stopTimer(state.PID)
 			return nil
 		},
 	}

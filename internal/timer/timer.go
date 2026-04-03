@@ -1,12 +1,23 @@
 package timer
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
 )
 
-var sleep = time.Sleep
+var waitForDuration = func(ctx context.Context, duration time.Duration) error {
+	timer := time.NewTimer(duration)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
 
 type Session struct {
 	TeaName     string
@@ -41,13 +52,17 @@ func (s *Session) IsFinished() bool {
 	return s.CurrentPour >= s.TotalPours
 }
 
-func (s *Session) RunCurrentPour(onReady func() error) error {
+func (s *Session) RunCurrentPour(ctx context.Context, onReady func() error) error {
 	duration := s.CurrentPourDuration()
 	if duration <= 0 {
 		return fmt.Errorf("invalid pour duration: %d", duration)
 	}
 
 	for remaining := duration; remaining > 0; remaining-- {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
 		state := &State{
 			PID:          os.Getpid(),
 			TeaName:      s.TeaName,
@@ -59,7 +74,13 @@ func (s *Session) RunCurrentPour(onReady func() error) error {
 		if err := WriteState(state, s.StatePath); err != nil {
 			return fmt.Errorf("writing state: %w", err)
 		}
-		sleep(1 * time.Second)
+		if err := waitForDuration(ctx, 1*time.Second); err != nil {
+			return err
+		}
+	}
+
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
 	state := &State{
@@ -78,4 +99,32 @@ func (s *Session) RunCurrentPour(onReady func() error) error {
 		return nil
 	}
 	return onReady()
+}
+
+func (s *Session) WaitForConfirmation(ctx context.Context) (bool, error) {
+	for {
+		if err := ctx.Err(); err != nil {
+			return false, err
+		}
+
+		state, err := ReadState(s.StatePath)
+		if err != nil {
+			return false, fmt.Errorf("reading state: %w", err)
+		}
+		if state == nil {
+			return false, nil
+		}
+
+		switch state.Status {
+		case StatusConfirmed:
+			return true, nil
+		case StatusReady:
+		default:
+			return false, fmt.Errorf("unexpected state while waiting for confirmation: %s", state.Status)
+		}
+
+		if err := waitForDuration(ctx, 200*time.Millisecond); err != nil {
+			return false, err
+		}
+	}
 }
