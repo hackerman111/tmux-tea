@@ -28,6 +28,7 @@ func NewTeaEditorModel(name string, isNew bool) TeaEditorModel {
 	ti.SetValue(name)
 	ti.Focus()
 	ti.CharLimit = 50
+	ti.Width = panelBodyWidth - 12 // subtract "  Название: " prefix
 
 	title := "Редактировать чай"
 	if isNew {
@@ -74,7 +75,7 @@ func (m TeaEditorModel) View() string {
 	s := TitleStyle.Render(m.title) + "\n\n"
 	s += "  Название: " + m.nameInput.View() + "\n\n"
 	s += HelpStyle.Render("  enter сохранить  esc отмена")
-	return BorderStyle.Render(s)
+	return renderPanel(s)
 }
 
 type ScheduleEditorResult struct {
@@ -98,9 +99,11 @@ func NewScheduleEditorModel(name string, pours []int, isNew bool) ScheduleEditor
 	nameInput.SetValue(name)
 	nameInput.Focus()
 	nameInput.CharLimit = 50
+	nameInput.Width = panelBodyWidth - 12 // subtract "  Название: " prefix
 
 	poursInput := textinput.New()
 	poursInput.Placeholder = "10,15,20,25,30"
+	poursInput.Width = panelBodyWidth - 2 // subtract "  " prefix
 	if len(pours) > 0 {
 		parts := make([]string, 0, len(pours))
 		for _, pour := range pours {
@@ -192,7 +195,7 @@ func (m ScheduleEditorModel) View() string {
 	}
 	s += "\n"
 	s += HelpStyle.Render("  tab поле  enter сохранить  esc отмена")
-	return BorderStyle.Render(s)
+	return renderPanel(s)
 }
 
 func lipglossRender(color lipgloss.Color, text string) string {

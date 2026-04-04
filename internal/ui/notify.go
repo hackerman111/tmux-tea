@@ -5,21 +5,20 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
-const teaTimeASCII = `
-████████╗███████╗ █████╗ 
+const teaTimeASCII = `████████╗███████╗ █████╗
 ╚══██╔══╝██╔════╝██╔══██╗
    ██║   █████╗  ███████║
    ██║   ██╔══╝  ██╔══██║
    ██║   ███████╗██║  ██║
    ╚═╝   ╚══════╝╚═╝  ╚═╝`
 
-const finishedASCII = `
-██████╗  ██████╗ ███╗   ██╗███████╗
+const finishedASCII = `██████╗  ██████╗ ███╗   ██╗███████╗
 ██╔══██╗██╔═══██╗████╗  ██║██╔════╝
-██║  ██║██║   ██║██╔██╗ ██║█████╗  
-██║  ██║██║   ██║██║╚██╗██║██╔══╝  
+██║  ██║██║   ██║██╔██╗ ██║█████╗
+██║  ██║██║   ██║██║╚██╗██║██╔══╝
 ██████╔╝╚██████╔╝██║ ╚████║███████╗
 ╚═════╝  ╚═════╝ ╚═╝  ╚═══╝╚══════╝`
 
@@ -62,22 +61,25 @@ func (m NotifyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m NotifyModel) View() string {
-	var s string
+	const contentWidth = 46
+
+	var header, subtext, help string
 	if m.finished {
-		s = NotifyStyle.Render(finishedASCII) + "\n\n"
-		s += NotifyStyle.Render("Чаепитие завершено!") + "\n"
+		header = finishedASCII
+		subtext = "Чаепитие завершено!"
+		help = "Нажмите Enter"
 	} else {
-		s = NotifyStyle.Render(teaTimeASCII) + "\n\n"
-		s += NotifyStyle.Render(
-			fmt.Sprintf("%s · пролив %d/%d", m.teaName, m.pourIndex+1, m.totalPours),
-		) + "\n"
+		header = teaTimeASCII
+		subtext = fmt.Sprintf("%s · пролив %d/%d", m.teaName, m.pourIndex+1, m.totalPours)
+		help = "Enter закрыть, затем Prefix+T"
 	}
 
-	s += "\n"
-	if m.finished {
-		s += HelpStyle.Render("  Нажмите Enter")
-	} else {
-		s += HelpStyle.Render("  Enter закрыть, затем Prefix+T")
-	}
-	return BorderStyle.Render(s)
+	body := NotifyStyle.Width(contentWidth).Render(header + "\n\n" + subtext)
+	foot := lipgloss.NewStyle().
+		Foreground(ColorMuted).
+		Width(contentWidth).
+		Align(lipgloss.Center).
+		Render(help)
+
+	return BorderStyle.Width(contentWidth).Render(body + "\n\n" + foot)
 }

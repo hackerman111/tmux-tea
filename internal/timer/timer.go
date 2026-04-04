@@ -98,7 +98,14 @@ func (s *Session) RunCurrentPour(ctx context.Context, onReady func() error) erro
 	if onReady == nil {
 		return nil
 	}
-	return onReady()
+	if err := onReady(); err != nil {
+		return err
+	}
+
+	// Re-write ready state after the popup closes to clear any confirmation
+	// that may have been triggered via the hotkey while the popup was visible.
+	state.Status = StatusReady
+	return WriteState(state, s.StatePath)
 }
 
 func (s *Session) WaitForConfirmation(ctx context.Context) (bool, error) {
