@@ -143,11 +143,11 @@ func TestScheduleModelViewContainsTeaNamePreviewAndHelp(t *testing.T) {
 }
 
 func TestScheduleModelViewTruncatesLongLabels(t *testing.T) {
-	longTeaName := "Очень длинное название шен пуэра для узкого popup окна"
+	longTeaName := "Очень длинное название шен пуэра для узкого popup окна с дополнительным пояснением по ферментации"
 	longSchedule := config.Schedule{
 		ID:    "long",
-		Name:  "Экспериментальное расписание для очень длинного меню",
-		Pours: []int{5, 10, 15, 20, 25, 30, 35, 40, 45},
+		Name:  "Экспериментальное расписание для очень длинного меню с большим количеством поясняющего текста",
+		Pours: []int{5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60},
 	}
 
 	view := NewScheduleModel(longTeaName, []config.Schedule{longSchedule}).View()
@@ -163,8 +163,8 @@ func TestScheduleModelViewTruncatesLongLabels(t *testing.T) {
 	}
 
 	for _, line := range strings.Split(strings.TrimRight(view, "\n"), "\n") {
-		if width := lipgloss.Width(line); width > 56 {
-			t.Fatalf("line width = %d, want <= 56: %q", width, line)
+		if width := lipgloss.Width(line); width > menuPopupWidth {
+			t.Fatalf("line width = %d, want <= %d: %q", width, menuPopupWidth, line)
 		}
 	}
 }

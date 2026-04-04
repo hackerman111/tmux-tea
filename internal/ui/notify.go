@@ -27,7 +27,7 @@ type NotifyModel struct {
 	pourIndex  int
 	totalPours int
 	finished   bool
-	confirmed  bool
+	dismissed  bool
 }
 
 func NewNotifyModel(teaName string, pourIndex, totalPours int, finished bool) NotifyModel {
@@ -39,8 +39,8 @@ func NewNotifyModel(teaName string, pourIndex, totalPours int, finished bool) No
 	}
 }
 
-func (m NotifyModel) Confirmed() bool {
-	return m.confirmed
+func (m NotifyModel) Dismissed() bool {
+	return m.dismissed
 }
 
 func (m NotifyModel) Init() tea.Cmd {
@@ -52,7 +52,7 @@ func (m NotifyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, key.NewBinding(key.WithKeys("enter", "esc", " "))):
-			m.confirmed = true
+			m.dismissed = true
 			return m, tea.Quit
 		}
 	}
@@ -71,7 +71,7 @@ func (m NotifyModel) View() string {
 	} else {
 		header = teaTimeASCII
 		subtext = fmt.Sprintf("%s · пролив %d/%d", m.teaName, m.pourIndex+1, m.totalPours)
-		help = "Enter закрыть, затем Prefix+T"
+		help = "Enter закрыть. Следующий пролив: Prefix+T"
 	}
 
 	body := NotifyStyle.Width(contentWidth).Render(header + "\n\n" + subtext)

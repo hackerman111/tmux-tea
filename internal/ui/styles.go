@@ -7,9 +7,9 @@ import (
 )
 
 const (
-	menuPopupWidth   = 56
-	menuPopupHeight  = 16
-	panelBodyWidth   = 46
+	menuPopupWidth   = 72
+	menuPopupHeight  = 28
+	panelBodyWidth   = 62
 	notifyPopupWidth = 58
 )
 

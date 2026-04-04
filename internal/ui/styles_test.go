@@ -44,3 +44,15 @@ func TestStylesRenderContent(t *testing.T) {
 		t.Fatalf("NotifyStyle should render content, got %q", notify)
 	}
 }
+
+func TestMenuPopupDimensionsAllowLargerLayouts(t *testing.T) {
+	if menuPopupWidth < 72 {
+		t.Fatalf("menuPopupWidth = %d, want at least 72", menuPopupWidth)
+	}
+	if menuPopupHeight < 28 {
+		t.Fatalf("menuPopupHeight = %d, want at least 28", menuPopupHeight)
+	}
+	if panelBodyWidth < 60 {
+		t.Fatalf("panelBodyWidth = %d, want at least 60", panelBodyWidth)
+	}
+}

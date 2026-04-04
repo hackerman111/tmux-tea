@@ -22,12 +22,12 @@ func TestNewNotifyModel(t *testing.T) {
 	if model.finished {
 		t.Fatal("finished should be false")
 	}
-	if model.Confirmed() {
-		t.Fatal("confirmed should be false on init")
+	if model.Dismissed() {
+		t.Fatal("dismissed should be false on init")
 	}
 }
 
-func TestNotifyModelConfirmKeys(t *testing.T) {
+func TestNotifyModelDismissKeys(t *testing.T) {
 	keys := []tea.KeyMsg{
 		{Type: tea.KeyEnter},
 		{Type: tea.KeyEsc},
@@ -39,8 +39,8 @@ func TestNotifyModelConfirmKeys(t *testing.T) {
 		updated, _ := model.Update(keyMsg)
 		model = updated.(NotifyModel)
 
-		if !model.Confirmed() {
-			t.Fatalf("key %v should confirm notification", keyMsg.Type)
+		if !model.Dismissed() {
+			t.Fatalf("key %v should dismiss notification", keyMsg.Type)
 		}
 	}
 }
@@ -51,7 +51,9 @@ func TestNotifyModelViewShowsActivePour(t *testing.T) {
 	for _, want := range []string{
 		"Шен Пуэр",
 		"пролив 2/5",
-		"Enter закрыть, затем Prefix+T",
+		"Enter закрыть.",
+		"Следующий пролив:",
+		"Prefix+T",
 		"████████╗",
 	} {
 		if !strings.Contains(view, want) {

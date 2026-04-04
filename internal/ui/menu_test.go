@@ -128,7 +128,7 @@ func TestMenuModelViewContainsTeaNamesAndHelp(t *testing.T) {
 }
 
 func TestMenuModelViewTruncatesLongTeaNames(t *testing.T) {
-	longName := "Очень длинное название чая для узкого tmux popup окна"
+	longName := "Очень длинное название чая для узкого tmux popup окна с дополнительным описанием сорта и региона"
 	view := NewMenuModel([]config.Tea{{ID: "long", Name: longName}}).View()
 
 	if strings.Contains(view, longName) {
@@ -139,8 +139,8 @@ func TestMenuModelViewTruncatesLongTeaNames(t *testing.T) {
 	}
 
 	for _, line := range strings.Split(strings.TrimRight(view, "\n"), "\n") {
-		if width := lipgloss.Width(line); width > 56 {
-			t.Fatalf("line width = %d, want <= 56: %q", width, line)
+		if width := lipgloss.Width(line); width > menuPopupWidth {
+			t.Fatalf("line width = %d, want <= %d: %q", width, menuPopupWidth, line)
 		}
 	}
 }
