@@ -1,5 +1,8 @@
 # tmux-tea: UI Preview, Notification Centering, and Hotkey Swap
 
+> Superseded on 2026-05-04 by the Bash-only rewrite plan:
+> `docs/superpowers/plans/2026-05-04-tmux-tea-shell-rewrite.md`.
+
 ## Overview
 
 This change refines the existing tmux-tea UI without changing the core flow:

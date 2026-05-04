@@ -2,9 +2,17 @@
 set -euo pipefail
 
 CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$CURRENT_DIR"
+TEA_SCRIPT="$CURRENT_DIR/scripts/tmux-tea"
 
-echo "Building tmux-tea..."
-mkdir -p bin
-go build -o bin/tmux-tea ./cmd/tmux-tea
-echo "Done: bin/tmux-tea"
+command -v bash >/dev/null 2>&1 || {
+	echo "tmux-tea: bash is required" >&2
+	exit 1
+}
+
+command -v tmux >/dev/null 2>&1 || {
+	echo "tmux-tea: tmux is required" >&2
+	exit 1
+}
+
+chmod +x "$TEA_SCRIPT"
+echo "tmux-tea is ready: source $CURRENT_DIR/tea.tmux from tmux"

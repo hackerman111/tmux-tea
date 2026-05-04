@@ -1,8 +1,9 @@
-#!/usr/bin/env bash
+set -gF @tmux_tea_dir "#{d:current_file}"
 
-CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RUNNER="$CURRENT_DIR/scripts/run.sh"
+bind-key t run-shell -b "#{@tmux_tea_dir}/scripts/tmux-tea confirm"
+bind-key T display-popup -E -w 72 -h 28 "#{@tmux_tea_dir}/scripts/tmux-tea menu"
 
-tmux bind-key t display-popup -E -w 72 -h 28 "$RUNNER menu"
-tmux bind-key T run-shell "$RUNNER confirm"
-tmux set-option -ga status-right '#('"$RUNNER"' status)'
+if -F '#{!=:#{@tmux_tea_status_loaded},1}' {
+	set -gF status-right "#{status-right} ##(#{@tmux_tea_dir}/scripts/tmux-tea status)"
+	set -g @tmux_tea_status_loaded 1
+}

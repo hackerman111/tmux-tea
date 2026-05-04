@@ -1,5 +1,8 @@
 # tmux-tea: Tmux Tea Ceremony Timer Plugin
 
+> Superseded on 2026-05-04 by the Bash-only rewrite plan:
+> `docs/superpowers/plans/2026-05-04-tmux-tea-shell-rewrite.md`.
+
 ## Overview
 
 Плагин для tmux, реализующий таймер для чайной церемонии. Пользователь выбирает чай и расписание проливов через TUI-интерфейс, запускает таймер, и получает уведомления о каждом проливе.
