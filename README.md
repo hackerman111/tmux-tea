@@ -1,7 +1,6 @@
 # tmux-tea
 
-Lightweight tmux tea ceremony timer. No Go, no build step, no external TUI framework:
-one tmux config file and one Bash script.
+Lightweight tmux tea ceremony timer. One tmux config file and one Bash script.
 
 ## Install
 
@@ -17,17 +16,6 @@ Manual:
 source-file /home/papayka/my_plug/tmux-tea/tea.tmux
 ```
 
-If you prefer `run-shell` manually, use the TPM wrapper:
-
-```tmux
-run-shell /home/papayka/my_plug/tmux-tea/tmux-tea.tmux
-```
-
-Optional install check:
-
-```bash
-./scripts/install.sh
-```
 
 ## Hotkeys
 
