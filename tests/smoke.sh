@@ -17,6 +17,14 @@ assert_contains() {
 	[[ "$haystack" == *"$needle"* ]] || fail "$label: expected to find '$needle' in '$haystack'"
 }
 
+assert_not_contains() {
+	local haystack="$1"
+	local needle="$2"
+	local label="$3"
+
+	[[ "$haystack" != *"$needle"* ]] || fail "$label: did not expect to find '$needle' in '$haystack'"
+}
+
 run_tea() {
 	HOME="$TEST_HOME" \
 	XDG_CONFIG_HOME="$TEST_HOME/.config" \
@@ -35,6 +43,15 @@ run_tea_input() {
 			"$ROOT/scripts/tmux-tea" "$@"
 }
 
+run_tea_fake_tmux() {
+	HOME="$TEST_HOME" \
+	XDG_CONFIG_HOME="$TEST_HOME/.config" \
+	TMPDIR="$TEST_TMP" \
+	TMUX="$TEST_TMP/fake.sock,1,0" \
+	PATH="$TEST_TMP/bin:$PATH" \
+		"$ROOT/scripts/tmux-tea" "$@"
+}
+
 wait_for_file() {
 	local file="$1"
 	local i
@@ -51,6 +68,14 @@ tmux_isolated() {
 	TMUX= TMUX_PANE= tmux -L "$TMUX_SOCKET" "$@"
 }
 
+tmux_isolated_plugin_env() {
+	local socket_path server_pid pane_id
+	socket_path="$(tmux_isolated display-message -p '#{socket_path}')"
+	server_pid="$(tmux_isolated display-message -p '#{pid}')"
+	pane_id="$(tmux_isolated display-message -p '#{pane_id}')"
+	TMUX="$socket_path,$server_pid,$pane_id" TMUX_PANE="$pane_id" "$@"
+}
+
 TEST_TMP="$(mktemp -d "${TMPDIR:-/tmp}/tmux-tea-smoke.XXXXXX")"
 TEST_HOME="$TEST_TMP/home"
 STATE_FILE="$TEST_TMP/tmux-tea-state.${UID:-$(id -u)}"
@@ -64,8 +89,16 @@ cleanup() {
 trap cleanup EXIT
 
 mkdir -p "$TEST_HOME"
+mkdir -p "$TEST_TMP/bin"
+cat >"$TEST_TMP/bin/tmux" <<'SH'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"${TMUX_TEA_FAKE_LOG:?}"
+exit 0
+SH
+chmod +x "$TEST_TMP/bin/tmux"
+export TMUX_TEA_FAKE_LOG="$TEST_TMP/fake-tmux.log"
 
-bash -n "$ROOT/scripts/tmux-tea" "$ROOT/scripts/install.sh" "$ROOT/tests/smoke.sh"
+bash -n "$ROOT/tmux-tea.tmux" "$ROOT/scripts/tmux-tea" "$ROOT/scripts/install.sh" "$ROOT/tests/smoke.sh"
 
 initial_status="$(run_tea status)"
 [[ -z "$initial_status" ]] || fail "status should be empty without active timer"
@@ -92,6 +125,14 @@ if [[ "$(cat "$TEST_HOME/.config/tmux-tea/teas.tsv")" == *$'test-tea\tTest Tea'*
 	fail "delete tea should remove all selected tea rows"
 fi
 
+: >"$TMUX_TEA_FAKE_LOG"
+run_tea_fake_tmux menu >/dev/null
+assert_contains "$(cat "$TMUX_TEA_FAKE_LOG")" "display-menu" "menu command should call tmux display-menu"
+
+: >"$TMUX_TEA_FAKE_LOG"
+run_tea_fake_tmux schedule shen-puer >/dev/null
+assert_contains "$(cat "$TMUX_TEA_FAKE_LOG")" "display-menu" "schedule command should call tmux display-menu"
+
 active_status="$(run_tea status)"
 assert_contains "$active_status" "tea Shen Puer" "active status"
 
@@ -109,8 +150,24 @@ menu_binding="$(tmux_isolated list-keys -T prefix T)"
 status_right="$(tmux_isolated show-option -gqv status-right)"
 
 assert_contains "$confirm_binding" "tmux-tea confirm" "prefix+t binding"
-assert_contains "$menu_binding" "display-popup" "prefix+T binding"
+assert_contains "$menu_binding" "run-shell" "prefix+T binding"
 assert_contains "$menu_binding" "tmux-tea menu" "prefix+T command"
+assert_not_contains "$menu_binding" "display-popup" "prefix+T must not wrap display-menu in popup"
 assert_contains "$status_right" "tmux-tea status" "status-right"
+
+tmux_isolated kill-server
+TMUX_SOCKET="tmux-tea-smoke-${RANDOM}-${RANDOM}"
+tmux_isolated -f /dev/null new-session -d
+tmux_isolated set-option -g @tmux_tea_status_loaded 1
+tmux_isolated set-option -g status-right "base"
+tmux_isolated_plugin_env "$ROOT/tmux-tea.tmux"
+
+confirm_binding="$(tmux_isolated list-keys -T prefix t)"
+menu_binding="$(tmux_isolated list-keys -T prefix T)"
+status_right="$(tmux_isolated show-option -gqv status-right)"
+
+assert_contains "$confirm_binding" "tmux-tea confirm" "TPM prefix+t binding"
+assert_contains "$menu_binding" "tmux-tea menu" "TPM prefix+T command"
+assert_contains "$status_right" "tmux-tea status" "TPM status-right despite stale loaded flag"
 
 printf 'smoke tests passed\n'

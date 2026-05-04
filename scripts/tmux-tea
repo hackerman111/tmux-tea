@@ -326,7 +326,7 @@ menu_cmd() {
 		[[ -n "$key" ]] || key=""
 		command="run-shell -b \"$(shell_command "$ROOT/scripts/tmux-tea" schedule "$tea_id")\""
 		args+=("$tea_name" "$key" "$command")
-		((count++))
+		count=$((count + 1))
 	done <"$CONFIG_FILE"
 
 	args+=("Edit teas and schedules" e "display-popup -E -w 72 -h 24 \"$(shell_command "$ROOT/scripts/tmux-tea" edit)\"")
@@ -352,7 +352,7 @@ schedule_menu_cmd() {
 		label="$schedule_name ($pours)"
 		command="run-shell -b \"$(shell_command "$ROOT/scripts/tmux-tea" start "$tea_id" "$schedule_id")\""
 		args+=("$label" "$key" "$command")
-		((count++))
+		count=$((count + 1))
 	done <"$CONFIG_FILE"
 
 	(( count > 0 )) || die "tea not found: $want_tea"
