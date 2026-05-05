@@ -21,6 +21,28 @@ tmux_msg() {
 	has_tmux && tmux display-message "$*" >/dev/null 2>&1 || true
 }
 
+strip_status_widgets() {
+	local value="$1"
+	printf '%s' "$value" | sed -E 's/[[:space:]]*#\([^)]*tmux-tea[[:space:]]+status[^)]*\)//g; s/[[:space:]]+$//'
+}
+
+ensure_status_widget() {
+	has_tmux || return 0
+
+	local current cleaned segment
+	segment="#($ROOT/scripts/tmux-tea status)"
+	current="$(tmux show-option -gqv status-right 2>/dev/null || true)"
+
+	if [[ "$current" == *"$ROOT/scripts/tmux-tea status"* ]]; then
+		tmux set-option -gq @tmux_tea_status_loaded 1 >/dev/null 2>&1 || true
+		return 0
+	fi
+
+	cleaned="$(strip_status_widgets "$current")"
+	tmux set-option -gq status-right "${cleaned:+$cleaned }$segment" >/dev/null 2>&1 || true
+	tmux set-option -gq @tmux_tea_status_loaded 1 >/dev/null 2>&1 || true
+}
+
 shell_command() {
 	local out="" part arg
 	for arg in "$@"; do
@@ -281,10 +303,11 @@ start_cmd() {
 	find_schedule "$tea_id_arg" "$schedule_id_arg" || die "schedule not found: $tea_id_arg/$schedule_id_arg"
 
 	stop_cmd >/dev/null 2>&1 || true
+	ensure_status_widget
 	nohup "$ROOT/scripts/tmux-tea" timer "$tea_id_arg" "$schedule_id_arg" >/dev/null 2>&1 &
 	child="$!"
 	tmux_msg "tmux-tea started: $FOUND_TEA_NAME / $FOUND_SCHEDULE_NAME"
-	printf 'started %s/%s pid=%s\n' "$tea_id_arg" "$schedule_id_arg" "$child"
+	[[ -n "${TMUX:-}" ]] || printf 'started %s/%s pid=%s\n' "$tea_id_arg" "$schedule_id_arg" "$child"
 }
 
 confirm_cmd() {
@@ -294,6 +317,7 @@ confirm_cmd() {
 		return 0
 	fi
 
+	ensure_status_widget
 	case "$status" in
 		ready)
 			: >"$ACK_FILE"

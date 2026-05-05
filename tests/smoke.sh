@@ -76,6 +76,15 @@ tmux_isolated_plugin_env() {
 	TMUX="$socket_path,$server_pid,$pane_id" TMUX_PANE="$pane_id" "$@"
 }
 
+tmux_isolated_tea() {
+	tmux_isolated_plugin_env env \
+		HOME="$TEST_HOME" \
+		XDG_CONFIG_HOME="$TEST_HOME/.config" \
+		TMPDIR="$TEST_TMP" \
+		TMUX_TEA_NO_POPUP=1 \
+		"$ROOT/scripts/tmux-tea" "$@"
+}
+
 TEST_TMP="$(mktemp -d "${TMPDIR:-/tmp}/tmux-tea-smoke.XXXXXX")"
 TEST_HOME="$TEST_TMP/home"
 STATE_FILE="$TEST_TMP/tmux-tea-state.${UID:-$(id -u)}"
@@ -159,7 +168,7 @@ tmux_isolated kill-server
 TMUX_SOCKET="tmux-tea-smoke-${RANDOM}-${RANDOM}"
 tmux_isolated -f /dev/null new-session -d
 tmux_isolated set-option -g @tmux_tea_status_loaded 1
-tmux_isolated set-option -g status-right "base"
+tmux_isolated set-option -g status-right "base #(/old/path/tmux-tea status)"
 tmux_isolated_plugin_env "$ROOT/tmux-tea.tmux"
 
 confirm_binding="$(tmux_isolated list-keys -T prefix t)"
@@ -169,5 +178,14 @@ status_right="$(tmux_isolated show-option -gqv status-right)"
 assert_contains "$confirm_binding" "tmux-tea confirm" "TPM prefix+t binding"
 assert_contains "$menu_binding" "tmux-tea menu" "TPM prefix+T command"
 assert_contains "$status_right" "tmux-tea status" "TPM status-right despite stale loaded flag"
+assert_contains "$status_right" "$ROOT/scripts/tmux-tea status" "TPM status-right should use current plugin path"
+
+tmux_isolated set-option -g @tmux_tea_status_loaded 1
+tmux_isolated set-option -g status-right "base"
+start_output="$(tmux_isolated_tea start shen-puer default)"
+assert_not_contains "$start_output" "pid=" "tmux start should not print raw pid output"
+status_right="$(tmux_isolated show-option -gqv status-right)"
+assert_contains "$status_right" "$ROOT/scripts/tmux-tea status" "start should repair missing status-right timer"
+run_tea stop >/dev/null
 
 printf 'smoke tests passed\n'
